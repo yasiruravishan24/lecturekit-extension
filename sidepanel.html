@@ -8,7 +8,14 @@
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
-  <header class="top"><span class="logo" aria-hidden="true">🎓</span><b>Lecture Assistant</b><span id="who" class="who"></span></header>
+  <header class="top"><img src="icons/icon32.png" width="24" height="24" alt=""><b>Lecture Assistant</b><div class="acct" id="acct" hidden>
+      <button id="avatar" class="avatar" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Account menu"></button>
+      <div id="menu" class="acct-menu" role="menu" hidden>
+        <div class="acct-head"><span class="avatar big" id="avatar2" aria-hidden="true"></span><div class="acct-who"><b id="acct-name"></b><span id="acct-mail"></span></div></div>
+        <button id="logout" class="acct-item" type="button" role="menuitem">Log out</button>
+      </div>
+    </div>
+  </header>
   <main id="app" aria-live="polite"></main>
   <script type="module" src="sidepanel.js"></script>
 </body>

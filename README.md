@@ -1,8 +1,9 @@
 # Lecture Assistant: Chrome extension
 
 Records the sound (and, if you tick it, the picture) of a browser tab, such as an online lecture, and sends it to the
-Lecture Assistant server in 5-minute parts while the lecture runs. After you press **Stop**, it sends the last part,
-optionally the slides, asks the server to make the notes, and links to them on the website.
+Lecture Assistant server in 5-minute parts while the lecture runs. The server turns each part into text as it arrives, so
+after you press **Stop** only the last part and the notes are left. Slides (optional) are chosen before you start. The server
+also reads the board and slides from the picture, blurs faces, and keeps a replay you can watch later on the website.
 
 Chrome 116 or newer. Plain JavaScript, no build step. The side panel is the user interface, an offscreen document owns the
 recorders (so closing the panel never stops a lecture), and the service worker sends the parts.
@@ -12,10 +13,18 @@ recorders (so closing the panel never stops a lecture), and the service worker s
 1. `npm run pack` makes `lecturekit-extension.zip` (or use the `lecturekit-extension` folder itself).
 2. Open `chrome://extensions`, turn on **Developer mode**.
 3. **Load unpacked** and choose the unzipped folder.
-4. Click the extension icon on the lecture tab: the side panel opens. Log in with your Lecture Assistant account.
+4. Click the extension icon **on the lecture tab**: the side panel opens and Chrome lets the extension record that tab. (Opening the panel any other way will not work: Chrome only allows recording after the icon was clicked on that tab.)
+5. Log in. If you are already logged in on the website in another tab, press **Continue as ...** and the same login is used. Or use your email and password, or **Continue with Google**.
 
-The default server is `https://localhost:8443`. Use **Server** on the log-in screen to point it at another address
-(Chrome asks you to allow that address once).
+The server address is built into the extension (default `https://localhost:8443`); the log-in screen has no server field.
+For your real server run `LK_SERVER=https://your.domain npm run pack`: it sets the address and the permission for it in the zip.
+
+The extension has a fixed id (`kmgkdnaomhfnbclnchelhccmmebiahfi`, from the `key` in the manifest). Use it for:
+
+- `EXTENSION_ORIGIN=chrome-extension://kmgkdnaomhfnbclnchelhccmmebiahfi` in the server `.env`
+- Google sign-in: in the Google Cloud console, open the same OAuth client the website uses and add
+  `https://kmgkdnaomhfnbclnchelhccmmebiahfi.chromiumapp.org/` to **Authorised redirect URIs**. Without it the Google button in the
+  panel says Google refused the sign-in. (The button is greyed out when the server has no `GOOGLE_CLIENT_ID`.)
 
 ## What is in each file
 
@@ -40,15 +49,14 @@ npm run e2e         # loads the real extension in Chromium against a mock server
 The automatic test uses a made-up stream because Chrome only allows tab capture after a real click on the toolbar icon.
 So the real capture needs a manual check:
 
-- [ ] open a tab that plays sound or video, click the extension icon on that tab, Start: the tab stays audible
+- [ ] open a tab that plays sound or video, click the extension icon on that tab, Start: the tab stays audible (if it says the tab cannot be recorded, close the panel, click the icon on the lecture tab again and press Start)
 - [ ] let it run 11 minutes: parts 1, 2, 3 turn green
 - [ ] Pause, wait, Resume: the timer continues, no gap in the notes
 - [ ] switch off Wi-Fi for 2 minutes, switch on: all parts arrive
 - [ ] close the panel and open it again: recording continues, the timer is right
-- [ ] Stop, add slides, Make notes, Open notes shows the notes on the website
+- [ ] Stop and process: the panel sends the rest and shows "Notes are ready"; Open notes shows the notes, the key moments and the replay on the website
 
 ## Limits (v1)
 
 - Only the active tab is recorded, never the microphone. Browser pages (`chrome://`) cannot be recorded.
-- Pictures of a live recording are not yet read for the notes and there is no replay video for live recordings.
 - An account made with Google has no password; set one on the website first (not built yet) or register with an email.

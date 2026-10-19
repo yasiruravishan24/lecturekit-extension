@@ -3,3 +3,5 @@ test-results/
 playwright-report/
 lecturekit-extension.zip
 .DS_Store
+
+lecturekit-extension/

@@ -17,9 +17,11 @@ export function startMock({ failFirstUploads = 0, limitAtFinish = false } = {}) 
       const send = (status, obj) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(obj)) }
       const p = url.pathname.replace(/^\/api/, '')
       const auth = req.headers.authorization
+      if (p === '/web') { res.writeHead(200, { 'Content-Type': 'text/html' }); return res.end('<title>web</title><p>the website</p>') }
+      if (p === '/auth/config') return send(200, { google_enabled: false, google_client_id: null, limits: {} })
       if (p === '/auth/login') return send(200, { token: 'tok', expires_at: new Date(Date.now() + 864e5).toISOString() })
       if (auth !== 'Bearer tok') return send(401, { error: { code: 'unauthorized', message: 'Log in' } })
-      if (p === '/auth/me') return send(200, { id: 1, email: 'a@b.c', full_name: 'A B' })
+      if (p === '/auth/me') return send(200, { user: { id: 1, email: 'a@b.c', full_name: 'A B' } })
       if (p === '/courses') return send(200, [{ id: 1, name: 'BSc Computing' }])
       if (p === '/courses/1/modules') return send(200, [{ id: 11, name: 'Programming' }])
       if (p === '/modules/11/sessions') { sessionId += 1; log.created.push(JSON.parse(body.toString()).title); return send(201, { id: sessionId }) }

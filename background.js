@@ -8,7 +8,14 @@ const store = makeChunkStore()
 const api = makeApi({ get: getSettings, onUnauthorized: () => setLocal({ token: null }) })
 const queue = makeQueue({ store, api, onChange: (q) => setLocal({ queue: q }) })
 
-chrome.runtime.onInstalled.addListener(() => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {}))
+// Clicking the icon opens the panel AND tells Chrome we were invoked on this tab (activeTab): tab capture needs that.
+// (With openPanelOnActionClick the click did not grant it, and recording failed with "Chrome pages cannot be captured".)
+chrome.runtime.onInstalled.addListener(() => chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {}))
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {})
+chrome.action.onClicked.addListener((tab) => {
+  chrome.sidePanel.open({ tabId: tab.id }).catch(() => {})            // first, while the click still counts as a user action
+  setLocal({ target: { id: tab.id, title: tab.title || '', url: tab.url || '' } })
+})
 chrome.runtime.onStartup.addListener(() => { queue.kick() })
 chrome.alarms.create('drain', { periodInMinutes: 1 })
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === 'drain') queue.kick() })
@@ -36,7 +43,7 @@ async function start(p) {
   let streamId = null
   if (!p.fake) {
     try { streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: p.tabId }) }
-    catch (e) { throw new Error('This tab cannot be recorded. Open the lecture tab, click the Lecture Assistant icon on it, and press Start again. (Chrome pages cannot be recorded.)') }
+    catch (e) { throw new Error(`This tab cannot be recorded: ${e.message}. Open the lecture tab, click the Lecture Assistant icon on that tab, and press Start.`) }
   }
   const session = await api.createSession(p.moduleId, p.title)
   try {
@@ -105,12 +112,13 @@ chrome.runtime.onMessage.addListener((m, _sender, respond) => {
   if (m.target === 'offscreen') return
   const done = (p) => { p.then((v) => respond({ ok: true, value: v }), (e) => respond({ ok: false, error: friendly(e) })); return true }
   if (m.source === 'offscreen') {
-    if (m.type === 'tick') setRec({ seconds: m.t })
+    if (m.type === 'tick') { if (Math.floor(m.t) % 10 === 0) setRec({ seconds: m.t }) }       // not every second: the panel has the ticks itself
     else if (m.type === 'chunk-saved') queue.kick()
     else if (m.type === 'stopped') {
-      setRec({ phase: m.total ? 'stopped' : 'idle', total: m.total, seconds: m.seconds }).then(() => {
+      setRec({ phase: m.total ? 'stopped' : 'idle', total: m.total, seconds: m.seconds, error: null }).then(() => {
         queue.kick()
         chrome.offscreen.closeDocument().catch(() => {})
+        if (m.total) finish()                                          // "Stop and process": send the rest and make the notes, no more questions
       })
     }
     return
