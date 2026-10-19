@@ -1,0 +1,14 @@
+{
+  "name": "lecturekit-extension",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.js",
+    "e2e": "playwright test",
+    "pack": "node scripts/pack.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
