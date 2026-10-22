@@ -4,9 +4,9 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 
-export function startMock({ failFirstUploads = 0, limitAtFinish = false } = {}) {
+export function startMock({ failFirstUploads = 0, limitAtFinish = false, staysBusy = false } = {}) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'lk-chunks-'))
-  const log = { dir, files: {}, chunks: [], finishes: [], deleted: [], opened: [], created: [], uploadTries: 0 }
+  const log = { dir, files: {}, chunks: [], finishes: [], deleted: [], opened: [], created: [], cancelled: [], uploadTries: 0 }
   let sessionId = 700
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://x')
@@ -50,6 +50,9 @@ export function startMock({ failFirstUploads = 0, limitAtFinish = false } = {}) 
         log.finishes.push({ total: Number(url.searchParams.get('total')), slides: (body.toString('latin1').match(/name="slides"; filename="([^"]+)"/g) || []).length })
         return send(200, { job_id: 1 })
       }
+      if (/^\/sessions\/\d+\/cancel$/.test(p) && req.method === 'POST') { log.cancelled.push({ p, kind: url.searchParams.get('kind') }); staysBusy = 'cancelled'; return send(200, { state: 'cancelling' }) }
+      if (p === '/jobs/1' && staysBusy === 'cancelled') return send(200, { id: 1, state: 'cancelled', stage: 'cancelled', percent: 10, message: '' })
+      if (p === '/jobs/1' && staysBusy) return send(200, { id: 1, state: 'processing', stage: 'transcribe', percent: 12, message: 'Turning speech into text' })
       if (p === '/jobs/1') return send(200, { id: 1, state: 'done', stage: 'done', percent: 100, message: 'Done' })
       send(404, { error: { code: 'not_found', message: p } })
     })

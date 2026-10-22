@@ -133,3 +133,22 @@ test('the panel uses the same theme as the website, and follows it when it chang
   await expect.poll(bg, { timeout: 3000 }).toBe('rgb(15, 22, 35)')
   await context.close(); mock.close()
 })
+
+test('cancel while the notes are being made: the lecture is deleted and the panel is ready again', async () => {
+  const mock = await startMock({ staysBusy: true })
+  const { context, id } = await launch()
+  const page = await context.newPage()
+  page.on('dialog', (d) => d.accept())
+  await page.goto(`chrome-extension://${id}/sidepanel.html?fake=1&L=10`)
+  await logIn(page, mock)
+  await page.getByLabel('Session title').fill('By mistake')
+  await page.getByRole('button', { name: 'Start recording' }).click()
+  await expect(page.getByText('Recording', { exact: true })).toBeVisible()
+  await page.waitForTimeout(3000)
+  await page.getByRole('button', { name: 'Stop and process' }).click()
+  await expect(page.getByRole('heading', { name: 'Making your notes' })).toBeVisible({ timeout: 60000 })
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('heading', { name: 'Record a lecture' })).toBeVisible({ timeout: 15000 })      // back at the start
+  expect(mock.log.cancelled).toEqual([{ p: '/sessions/701/cancel', kind: 'main' }])
+  await context.close(); mock.close()
+})

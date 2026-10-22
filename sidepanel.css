@@ -32,6 +32,7 @@ input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible
 button.btn, a.btn { font: inherit; font-weight: 500; text-align: center; text-decoration: none; cursor: pointer; border-radius: 8px; border: 1px solid var(--btn); background: var(--btn); color: #fff; padding: 10px 14px; display: inline-block; }
 button.btn:hover, a.btn:hover { background: var(--btn-dark); }
 button.btn.ghost, a.btn.ghost { background: transparent; color: var(--primary); border-color: var(--primary); }
+button.btn.ghost.danger { color: #c10015; border-color: #c10015; }
 button.btn.danger { background: var(--negative); border-color: var(--negative); }
 button.btn.record { background: var(--negative); border-color: var(--negative); font-size: 16px; padding: 14px; }
 button.btn:disabled { opacity: 0.5; cursor: default; }

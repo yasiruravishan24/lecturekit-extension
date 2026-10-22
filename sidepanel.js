@@ -349,8 +349,25 @@ function stopped() {
 // ---------- E4b processing, limit, done, failed
 async function processing() {
   app.innerHTML = `<div class="card"><h1>Making your notes</h1><div class="muted" id="jobmsg">Starting...</div><div class="bar"><span id="jobbar" style="width:5%"></span></div>
-    <div class="muted">You can close this panel. You will find the notes on the website when they are ready.</div></div>`
+    <div class="muted">You can close this panel. You will find the notes on the website when they are ready.</div>
+    <button class="btn ghost danger" id="cancelnotes">Cancel</button><div class="muted small">Pressed Stop by mistake? Cancel stops this and deletes the lecture.</div></div>`
+  $('#cancelnotes').onclick = cancelNotes
   pollJob()
+}
+async function cancelNotes() {
+  if (!window.confirm('Cancel and delete this lecture? The processing stops, and the lecture and its recording are deleted. This cannot be undone.')) return
+  const button = $('#cancelnotes')
+  if (button) { button.disabled = true; button.textContent = 'Stopping...' }
+  try {
+    await api.cancel(rec.sessionId)
+    notice = 'The lecture was cancelled and deleted.'
+    await send({ type: 'reset' })
+  } catch (e) {
+    if (button) { button.disabled = false; button.textContent = 'Cancel' }
+    if (e.code === 'nothing_to_cancel') return                       // it had just finished: the panel moves on by itself
+    notice = friendly(e)
+    render(true)
+  }
 }
 function pollJob() {
   clearTimeout(jobTimer)
@@ -363,6 +380,7 @@ function pollJob() {
       if (msg) msg.textContent = job.message || job.stage || 'Working...'
       if (job.state === 'done') return setLocal({ rec: { ...rec, phase: 'done' } })
       if (job.state === 'failed') return setLocal({ rec: { ...rec, phase: 'failed', error: job.error_message || 'Processing failed.' } })
+      if (job.state === 'cancelled') return send({ type: 'reset' })                 // stopped (here or on another device): the lecture is gone
     } catch { /* try again */ }
     jobTimer = setTimeout(tick, 2000)
   }
